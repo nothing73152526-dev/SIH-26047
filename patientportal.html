@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediKiosk — AI Clinical Intake (SIH26047 Prototype)</title>
+<style>
+  :root{
+    --teal:#0e7c7b; --teal-dark:#0a5c5b; --teal-light:#e0f2f1;
+    --amber:#f59e0b; --red:#dc2626; --green:#16a34a;
+    --ink:#1f2937; --muted:#6b7280; --bg:#f3f4f6; --card:#ffffff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:"Segoe UI",Arial,sans-serif;}
+  body{background:var(--bg);color:var(--ink);min-height:100vh;}
+  header{background:linear-gradient(135deg,var(--teal),var(--teal-dark));color:#fff;
+         padding:16px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  header .logo{font-size:30px;}
+  header h1{font-size:22px;font-weight:700;}
+  header p{font-size:12px;opacity:.85;}
+  .badge{display:none;}
+  .kiosk{max-width:960px;margin:24px auto;padding:0 16px 60px;}
+  .stepbar{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
+  .step{flex:1;min-width:120px;background:#e5e7eb;border-radius:10px;padding:10px;
+        text-align:center;font-size:13px;font-weight:600;color:var(--muted);position:relative;}
+  .step.active{background:var(--teal);color:#fff;}
+  .step.done{background:var(--teal-light);color:var(--teal-dark);}
+  .card{background:var(--card);border-radius:16px;padding:28px;box-shadow:0 4px 16px rgba(0,0,0,.08);}
+  h2{color:var(--teal-dark);margin-bottom:6px;}
+  .sub{color:var(--muted);font-size:14px;margin-bottom:20px;}
+  .row{display:flex;gap:12px;flex-wrap:wrap;}
+  .btn{border:none;border-radius:10px;padding:14px 22px;font-size:15px;font-weight:600;
+       cursor:pointer;transition:.15s;}
+  .btn-primary{background:var(--teal);color:#fff;}
+  .btn-primary:hover{background:var(--teal-dark);}
+  .btn-ghost{background:#e5e7eb;color:var(--ink);}
+  .btn-ghost:hover{background:#d1d5db;}
+  .btn-danger{background:var(--red);color:#fff;}
+  input,select{padding:13px 14px;border:2px solid #d1d5db;border-radius:10px;font-size:15px;flex:1;min-width:220px;}
+  input:focus,select:focus{outline:none;border-color:var(--teal);}
+  .lang-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin:16px 0;}
+  .lang{border:2px solid #d1d5db;border-radius:10px;padding:14px;text-align:center;cursor:pointer;font-weight:600;}
+  .lang.sel{border-color:var(--teal);background:var(--teal-light);color:var(--teal-dark);}
+  .mode-toggle{display:flex;gap:10px;margin:14px 0;flex-wrap:wrap;}
+  .mode{padding:10px 16px;border-radius:24px;border:2px solid #d1d5db;cursor:pointer;font-weight:600;font-size:13px;}
+  .mode.on{border-color:var(--teal);background:var(--teal);color:#fff;}
+  .chat{border:1px solid #e5e7eb;border-radius:12px;padding:16px;height:300px;overflow-y:auto;background:#fafafa;margin-bottom:14px;}
+  .msg{max-width:75%;padding:10px 14px;border-radius:14px;margin-bottom:10px;font-size:14px;line-height:1.45;}
+  .ai{background:var(--teal-light);border:1px solid #b2dfdb;}
+  .user{background:#fff;border:1px solid #e5e7eb;margin-left:auto;}
+  .opts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+  .opt{border:1.5px solid var(--teal);color:var(--teal-dark);background:#fff;border-radius:20px;
+       padding:8px 16px;cursor:pointer;font-size:13px;font-weight:600;}
+  .opt:hover{background:var(--teal-light);}
+  .mic{display:flex;align-items:center;gap:10px;margin-top:12px;color:var(--muted);font-size:13px;}
+  .mic .dot{width:14px;height:14px;border-radius:50%;background:#9ca3af;}
+  .mic.rec .dot{background:var(--red);animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .drop{border:2px dashed #9ca3af;border-radius:12px;padding:28px;text-align:center;color:var(--muted);margin:14px 0;}
+  .drop b{color:var(--teal-dark);}
+  .doc{display:flex;justify-content:space-between;align-items:center;background:var(--teal-light);
+       border-radius:10px;padding:10px 14px;margin:8px 0;font-size:13px;}
+  .tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;}
+  .tag.ok{background:#dcfce7;color:var(--green);}
+  .tag.warn{background:#fee2e2;color:var(--red);}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px;}
+  th,td{padding:9px 10px;border:1px solid #e5e7eb;text-align:left;}
+  th{background:var(--teal-light);color:var(--teal-dark);}
+  .flagbox{background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px;margin:14px 0;
+           color:#991b1b;font-size:14px;}
+  .success{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px;color:#166534;font-size:14px;}
+  .hidden{display:none;}
+  footer{text-align:center;color:var(--muted);font-size:12px;margin-top:30px;}
+  .physician-view{background:#0f172a;color:#e2e8f0;border-radius:12px;padding:20px;margin-top:16px;}
+  .physician-view h3{color:#5eead4;margin-bottom:10px;font-size:15px;}
+  .physician-view li{font-size:13px;margin:5px 0 5px 18px;}
+</style>
+<base target="_blank">
+</head>
+<body>
+
+<header>
+  <div class="logo">🏥</div>
+  <div>
+    <h1>MediKiosk <span class="badge">SIH26047 · Prototype</span></h1>
+    <p>AI-Powered Patient Case-Taking · Ministry of Ayush / AIIA · ABDM Integrated</p>
+  </div>
+</header>
+
+<div class="kiosk">
+
+  <!-- STEP BAR -->
+  <div class="stepbar">
+    <div class="step active" id="sb1">1 · Identify</div>
+    <div class="step" id="sb2">2 · Converse</div>
+    <div class="step" id="sb3">3 · Scan</div>
+    <div class="step" id="sb4">4 · Summary</div>
+    <div class="step" id="sb5">5 · Consult</div>
+  </div>
+
+  <!-- STEP 1: IDENTIFY -->
+  <div class="card" id="step1">
+    <h2>Welcome 👋 Please identify yourself</h2>
+    <p class="sub">Enter your ABHA ID or Aadhaar, or register as a new patient. Audio guidance is available in your language.</p>
+    <div class="row">
+      <input id="abha" placeholder="ABHA Number (e.g. 91-4521-8934-7712)">
+      <button class="btn btn-ghost" onclick="mockLogin()">Scan ABHA QR 🔲</button>
+    </div>
+    <p style="margin:16px 0 4px;font-weight:600;">Preferred language / भाषा:</p>
+    <div class="lang-grid" id="langs">
+      <div class="lang sel">English</div><div class="lang">हिन्दी</div>
+      <div class="lang">தமிழ்</div><div class="lang">తెలుగు</div>
+      <div class="lang">മലയാളം</div><div class="lang">मराठी</div>
+      <div class="lang">বাংলা</div><div class="lang">ಕನ್ನಡ</div>
+    </div>
+    <label style="display:flex;gap:8px;align-items:center;font-size:14px;margin:8px 0 16px;">
+      <input type="checkbox" id="consent" style="min-width:auto;width:18px;height:18px;" checked>
+      I consent to my health data being captured & shared via ABDM (DPDP Act 2023 compliant) 🔊
+    </label>
+    <button class="btn btn-primary" onclick="goStep(2)">Start Case-Taking →</button>
+  </div>
+
+  <!-- STEP 2: CONVERSE -->
+  <div class="card hidden" id="step2">
+    <h2>Case-Taking Interview 🎙️</h2>
+    <p class="sub">Speak naturally or tap your answers. The AI asks follow-up questions like a doctor.</p>
+    <div class="mode-toggle">
+      <div class="mode on" id="mAllopathy" onclick="setMode('allopathy')">🩺 Allopathy Mode</div>
+      <div class="mode" id="mAyush" onclick="setMode('ayush')">🌿 Ayush Mode (Dashavidha Pariksha)</div>
+    </div>
+    <div class="chat" id="chat"></div>
+    <div class="mic" id="mic"><span class="dot"></span><span id="micTxt">Tap 🎤 and speak, or tap an option below</span></div>
+    <div style="margin-top:10px;">
+      <button class="btn btn-ghost" onclick="toggleMic()">🎤 Voice Input</button>
+      <button class="btn btn-primary" style="float:right;" onclick="goStep(3)">Next: Scan Documents →</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: SCAN -->
+  <div class="card hidden" id="step3">
+    <h2>Scan Your Medical Documents 📄</h2>
+    <p class="sub">Upload prior prescriptions, lab reports & discharge summaries — AI will OCR, structure and timeline them.</p>
+    <div class="drop" onclick="addDoc()">📁 <b>Tap to upload / place documents in the scanner tray</b><br><small>Supports handwritten & printed · Hindi + English OCR</small></div>
+    <div id="docList"></div>
+    <div class="row" style="margin-top:14px;">
+      <button class="btn btn-ghost" onclick="goStep(2)">← Back</button>
+      <button class="btn btn-primary" onclick="generateSummary()">Generate Summary →</button>
+    </div>
+  </div>
+
+  <!-- STEP 4: SUMMARY -->
+  <div class="card hidden" id="step4">
+    <h2>Your Case Summary ✅</h2>
+    <p class="sub">Review before it is sent to your doctor and linked to your ABHA record.</p>
+    <div id="summaryBox"></div>
+    <div class="row" style="margin-top:16px;">
+      <button class="btn btn-ghost" onclick="goStep(3)">← Edit</button>
+      <button class="btn btn-primary" onclick="goStep(5)">Submit to Doctor →</button>
+    </div>
+  </div>
+
+  <!-- STEP 5: CONSULT -->
+  <div class="card hidden" id="step5">
+    <h2>Done! Proceed to Consultation Room 🚪</h2>
+    <p class="sub">Your history has been pushed to the hospital information system and linked to ABHA.</p>
+    <div class="success">✅ Token <b>A-127</b> generated · Summary sent to Dr. Sharma (General Medicine) · Session data cleared 🔒</div>
+    <div class="physician-view">
+      <h3>👨‍⚕️ Physician Screen (preview)</h3>
+      <ul id="physList"></ul>
+    </div>
+    <button class="btn btn-primary" style="margin-top:18px;" onclick="resetAll()">↺ New Patient (Reset Demo)</button>
+  </div>
+
+  <footer>MediKiosk · Bhashini ASR/TTS · FHIR/ABDM · DPDP Act 2023 compliant · SIH 2026 PS SIH26047</footer>
+</div>
+
+<script>
+let ayushMode = false, redFlagged = false;
+
+/* ---------- helpers ---------- */
+function goStep(n){
+  for(let i=1;i<=5;i++){
+    document.getElementById('step'+i).classList.toggle('hidden', i!==n);
+    const sb=document.getElementById('sb'+i);
+    sb.className='step'+(i<n?' done':i===n?' active':'');
+  }
+  if(n===2 && !chatStarted){ startChat(); }
+}
+function mockLogin(){ document.getElementById('abha').value='91-4521-8934-7712'; }
+document.getElementById('langs').addEventListener('click',e=>{
+  if(e.target.classList.contains('lang')){
+    document.querySelectorAll('.lang').forEach(l=>l.classList.remove('sel'));
+    e.target.classList.add('sel');
+  }
+});
+function setMode(m){
+  ayushMode = (m==='ayush');
+  document.getElementById('mAllopathy').classList.toggle('on',!ayushMode);
+  document.getElementById('mAyush').classList.toggle('on',ayushMode);
+}
+
+/* ---------- STEP 2: conversational interview ---------- */
+let chatStarted=false, qi=0, answers=[];
+const flow = {
+ allopathy:[
+  {q:"Namaste! What is your main health problem today? 🗣️", opts:["Chest pain","Fever since 3 days","Knee joint pain","Diabetes follow-up"]},
+  {q:"You mentioned <b>chest pain</b>. When did it start?", opts:["Just now","Since 2 hours","Since yesterday","Since 1 week"]},
+  {q:"How severe is the pain? (SOCRATES)", opts:["Mild 😐","Moderate 😖","Severe 😫","With sweating & breathlessness ⚠️"]},
+  {q:"Do you have any past illnesses?", opts:["Diabetes","Hypertension","TB","None"]},
+  {q:"Any drug allergies?", opts:["Penicillin","Sulfa drugs","None known"]},
+  {q:"Do you smoke or consume alcohol?", opts:["Yes — daily","Occasionally","Never"]}
+ ],
+ ayush:[
+  {q:"Namaste! What is your main complaint (Vedana)? 🌿", opts:["Acidity (Amlapitta)","Joint pain (Sandhigata Vata)","Migraine (Ardhavabhedaka)","Constipation (Vibandha)"]},
+  {q:"What is your usual digestion like? (Agni Pariksha)", opts:["Good — regular hunger","Variable / erratic","Poor — heavy after meals","Very sharp, burning hunger"]},
+  {q:"Describe your bowel habit. (Koshtha)", opts:["Regular, soft","Hard, constipated","Loose, frequent","Irregular"]},
+  {q:"What is your body constitution like? (Prakriti)", opts:["Lean, active mind — Vata","Medium build, warm — Pitta","Solid, calm — Kapha","Mixed"]},
+  {q:"How is your appetite & diet? (Ahara Shakti)", opts:["Good","Moderate","Poor","Excessive"]},
+  {q:"Daily routine & sleep? (Vihara)", opts:["Regular","Night-shift work","Irregular sleep","Day sleep habit"]}
+ ]
+};
+function startChat(){
+  chatStarted=true; qi=0; answers=[]; redFlagged=false;
+  document.getElementById('chat').innerHTML='';
+  ask();
+}
+function ask(){
+  const list = ayushMode?flow.ayush:flow.allopathy;
+  if(qi>=list.length){ finishChat(); return; }
+  const item=list[qi];
+  const chat=document.getElementById('chat');
+  chat.innerHTML+=`<div class="msg ai">🤖 ${item.q}</div>
+    <div class="opts">${item.opts.map(o=>`<button class="opt" onclick="answer('${o.replace(/'/g,"\\'")}')">${o}</button>`).join('')}</div>`;
+  chat.scrollTop=chat.scrollHeight;
+}
+function answer(txt){
+  document.getElementById('chat').innerHTML+=`<div class="msg user">${txt}</div>`;
+  if(txt.includes('Severe')||txt.includes('sweating')||txt.includes('breathlessness')){
+    redFlagFlag();
+  }
+  answers.push(txt); qi++;
+  speak(txt);
+  setTimeout(ask,500);
+}
+function finishChat(){
+  const chat=document.getElementById('chat');
+  chat.innerHTML+=`<div class="msg ai">✅ Thank you! Your history is complete${ayushMode?' (with Dashavidha Pariksha)':''}. Please proceed to scan your documents.</div>`;
+  chat.scrollTop=chat.scrollHeight;
+}
+function redFlagFlag(){
+  if(redFlagged) return; redFlagged=true;
+  const chat=document.getElementById('chat');
+  chat.innerHTML+=`<div class="flagbox">🚨 <b>RED FLAG DETECTED — possible cardiac emergency.</b> Alert sent to triage nurse. You will be given priority. Please wait — help is coming.</div>`;
+  chat.scrollTop=chat.scrollHeight;
+}
+function speak(t){
+  try{
+    const u=new SpeechSynthesisUtterance("Noted. "+t);
+    u.lang='en-IN'; u.rate=0.95; speechSynthesis.speak(u);
+  }catch(e){}
+}
+let rec=false;
+function toggleMic(){
+  rec=!rec;
+  document.getElementById('mic').classList.toggle('rec',rec);
+  document.getElementById('micTxt').textContent = rec?'Listening… speak now 🎤':'Tap 🎤 and speak, or tap an option below';
+}
+
+/* ---------- STEP 3: documents ---------- */
+const sampleDocs=[
+  {name:"Prescription_DrMehta_2025-08-12.jpg", info:"Extracted: Tab. Metformin 500mg BD · Dx: Type 2 DM", tag:"ok", tagTxt:"OCR OK"},
+  {name:"LabReport_Lipid_2026-01-30.pdf", info:"Total Cholesterol 248 mg/dL (H) · LDL 172 (H)", tag:"warn", tagTxt:"ABNORMAL"},
+  {name:"DischargeSummary_CMC_2024-11-02.jpg", info:"Dx: Dengue (recovered) · handwritten OCR 96% conf.", tag:"ok", tagTxt:"OCR OK"}
+];
+let docIdx=0;
+function addDoc(){
+  if(docIdx>=sampleDocs.length){ alert("Demo: all sample documents loaded."); return; }
+  const d=sampleDocs[docIdx++];
+  document.getElementById('docList').innerHTML+=
+   `<div class="doc"><div>📄 <b>${d.name}</b><br><small>${d.info}</small></div>
+     <span class="tag ${d.tag}">${d.tagTxt}</span></div>`;
+}
+
+/* ---------- STEP 4: summary ---------- */
+function generateSummary(){
+  const chief=answers[0]||"Not recorded";
+  const onset=answers[1]||"—";
+  const ros = ayushMode
+    ? `<tr><th>Ayush (Dashavidha)</th><td>Agni: ${answers[1]||'—'} · Koshtha: ${answers[2]||'—'} · Prakriti: ${answers[3]||'—'}</td></tr>`
+    : `<tr><th>Review of Systems</th><td>Constitutional: afebrile per narration · CVS: ${redFlagged?'⚠️ chest pain — red flag triaged':'no complaint'}</td></tr>`;
+  document.getElementById('summaryBox').innerHTML=`
+   ${redFlagged?'<div class="flagbox">🚨 Red-flag triage: PRIORITY queue · Triage nurse notified.</div>':''}
+   <table>
+    <tr><th style="width:30%">Chief Complaint</th><td>${chief}</td></tr>
+    <tr><th>HPI</th><td>Onset: ${onset} · Course as narrated (auto-structured by AI)</td></tr>
+    <tr><th>Past History</th><td>${answers[3]||'—'}</td></tr>
+    <tr><th>Drug / Allergy</th><td>${answers[4]||'—'}</td></tr>
+    ${ros}
+    <tr><th>Prior Investigations</th><td>Cholesterol 248 ↑ (LabReport_Lipid_2026-01-30) · Metformin ongoing</td></tr>
+   </table>
+   <div class="success">🔊 Audio confirmation played for patient in selected language · Data encrypted & consent-logged</div>`;
+  goStep(4);
+}
+
+/* ---------- STEP 5 ---------- */
+function goStep5bridge(){}
+function resetAll(){
+  docIdx=0; chatStarted=false; answers=[]; qi=0;
+  document.getElementById('docList').innerHTML='';
+  document.getElementById('chat').innerHTML='';
+  document.getElementById('abha').value='';
+  goStep(1);
+}
+/* intercept step 5 to fill physician view */
+const _go=goStep;
+goStep=function(n){ _go(n); if(n===5){
+  document.getElementById('physList').innerHTML=
+   `<li><b>Chief complaint:</b> ${answers[0]||'—'}</li>
+    <li><b>HPI:</b> Onset ${answers[1]||'—'} · severity ${answers[2]||'—'}</li>
+    <li><b>Past/Allergy:</b> ${answers[3]||'—'} · ${answers[4]||'—'}</li>
+    <li><b>Labs:</b> Cholesterol 248 ↑ flagged · Metformin 500 BD active</li>
+    ${redFlagged?'<li style="color:#fca5a5">🚨 RED FLAG — priority consultation advised</li>':''}
+    <li style="color:#5eead4">Editable draft — physician confirms before saving to ABHA (FHIR)</li>`;
+}};
+</script>
+</body>
+</html>
